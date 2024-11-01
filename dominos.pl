@@ -1,6 +1,14 @@
 :- initialization(main, main).
 
-will_tip(domino(X)) :-
+object(domino, X) :- domino(X).
+object(ball, X) :- ball_x(X).
+
+left_of(object(K1, A), object(K2, B)) :- object(K1, A), object(K2, B), A < B.
+between(A, B, C) :- left_of(A, B), left_of(B, C).
+imm_left_of(A, B) :- left_of(A, B), not(between(A, _, B)).
+
+will_move(A) :-
+    A = object(domino, X),
     push(domino(X)),
     width(W), height(H),
     atom_concat('python3.11 will-tip.py ', W, Command1),
@@ -8,40 +16,23 @@ will_tip(domino(X)) :-
     atom_concat(Command2, H, Command),
     shell(Command, 0).
 
-will_be_tipped(D) :- will_tip(D).
-
-will_be_tipped(domino(X)) :-
+will_move(A) :-
+    imm_left_of(B, A),
     height(H),
-    domino(X1),
-    X1 < X,
+    A = object(_, X),
+    B = object(_, X1),
     X - X1 =< H,
-    will_be_tipped(domino(X1)).
+    will_move(B).
 
-will_be_tipped(domino(D)) :-
-    ball_x(B),
-    B < D,
-    will_move_ball(ball_x(B)).
+will_move(A) :-
+    imm_left_of(B, A),
+    B = object(ball, _),
+    will_move(B).
 
-will_be_tipped_(D) :- once(will_be_tipped(D)).
-
-will_move_ball(ball_x(B)) :-
-    height(H),
-    domino(X),
-    X =< B,
-    B - X =< H,
-    will_be_tipped(domino(X)).
-
-rightmost_ball(ball_x(B)) :-
-    aggregate(max(XPos), ball_x(XPos), B).
-
-rightmost_domino(domino(D)) :-
-    aggregate(max(XPos), domino(XPos), D).
-
-will_cup :-
-    rightmost_ball(ball_x(B)),
-    rightmost_domino(domino(D)),
-    B > D,
-    will_move_ball(ball_x(B)).
+will_beam_rotate :-
+    A = object(ball, _),
+    will_move(A),
+    not(left_of(A, _)).
 
 main :-
-    ( will_cup -> halt(0) ; halt(1) ).
+    ( will_beam_rotate -> halt(0) ; halt(1) ).
